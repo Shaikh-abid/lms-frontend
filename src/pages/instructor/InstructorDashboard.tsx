@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { mockCourses } from '@/data/courses';
 import { useAuthStore } from '@/store/authStore';
+import CouponManager from '@/components/instructor/CouponManager';
 
 // Mock instructor courses (filter by instructor)
 const instructorCourses = mockCourses.slice(0, 4).map((course, index) => ({
@@ -260,6 +261,11 @@ const InstructorDashboard = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Coupon Management */}
+        <div className="mt-8">
+          <CouponManager instructorId="instructor-1" />
+        </div>
       </div>
     </MainLayout>
   );
