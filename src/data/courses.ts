@@ -1,4 +1,12 @@
 import { Course } from '@/store/cartStore';
+import courseWebDev from '@/assets/course-web-dev.jpg';
+import courseReact from '@/assets/course-react.jpg';
+import coursePythonDs from '@/assets/course-python-ds.jpg';
+import courseUiux from '@/assets/course-uiux.jpg';
+import courseNodejs from '@/assets/course-nodejs.jpg';
+import courseReactNative from '@/assets/course-react-native.jpg';
+import courseJsAdvanced from '@/assets/course-js-advanced.jpg';
+import courseAws from '@/assets/course-aws.jpg';
 
 export const mockCourses: Course[] = [
   {
@@ -7,7 +15,7 @@ export const mockCourses: Course[] = [
     description: 'Learn HTML, CSS, JavaScript, React, Node.js, MongoDB and more. Build real-world projects and become a full-stack developer.',
     instructor: 'Dr. Angela Yu',
     instructorId: 'inst-1',
-    thumbnail: '/placeholder.svg',
+    thumbnail: courseWebDev,
     price: 499,
     originalPrice: 2999,
     rating: 4.8,
@@ -53,7 +61,7 @@ export const mockCourses: Course[] = [
     description: 'Dive deep into React.js! Learn hooks, Redux, React Router, Next.js, animations, and build amazing projects.',
     instructor: 'Maximilian Schwarzmüller',
     instructorId: 'inst-2',
-    thumbnail: '/placeholder.svg',
+    thumbnail: courseReact,
     price: 599,
     originalPrice: 3499,
     rating: 4.9,
@@ -80,7 +88,7 @@ export const mockCourses: Course[] = [
     description: 'Master Python for data analysis, visualization, machine learning, and deep learning with hands-on projects.',
     instructor: 'Jose Portilla',
     instructorId: 'inst-3',
-    thumbnail: '/placeholder.svg',
+    thumbnail: coursePythonDs,
     price: 699,
     originalPrice: 3999,
     rating: 4.7,
@@ -106,7 +114,7 @@ export const mockCourses: Course[] = [
     description: 'Learn Figma, design thinking, user research, prototyping, and create stunning user interfaces.',
     instructor: 'Daniel Walter Scott',
     instructorId: 'inst-4',
-    thumbnail: '/placeholder.svg',
+    thumbnail: courseUiux,
     price: 449,
     originalPrice: 2499,
     rating: 4.6,
@@ -131,7 +139,7 @@ export const mockCourses: Course[] = [
     description: 'Build RESTful APIs with Node.js, Express, MongoDB, authentication, and deployment.',
     instructor: 'Andrew Mead',
     instructorId: 'inst-5',
-    thumbnail: '/placeholder.svg',
+    thumbnail: courseNodejs,
     price: 549,
     originalPrice: 2999,
     rating: 4.8,
@@ -156,7 +164,7 @@ export const mockCourses: Course[] = [
     description: 'Create native iOS and Android apps using React Native. Build real apps and publish to app stores.',
     instructor: 'Stephen Grider',
     instructorId: 'inst-6',
-    thumbnail: '/placeholder.svg',
+    thumbnail: courseReactNative,
     price: 649,
     originalPrice: 3499,
     rating: 4.7,
@@ -182,7 +190,7 @@ export const mockCourses: Course[] = [
     description: 'Master closures, prototypes, async/await, design patterns, and become a JavaScript expert.',
     instructor: 'Andrei Neagoie',
     instructorId: 'inst-7',
-    thumbnail: '/placeholder.svg',
+    thumbnail: courseJsAdvanced,
     price: 399,
     originalPrice: 1999,
     rating: 4.9,
@@ -208,7 +216,7 @@ export const mockCourses: Course[] = [
     description: 'Prepare for AWS Cloud Practitioner exam. Learn cloud computing concepts, AWS services, and best practices.',
     instructor: 'Stephane Maarek',
     instructorId: 'inst-8',
-    thumbnail: '/placeholder.svg',
+    thumbnail: courseAws,
     price: 349,
     originalPrice: 1499,
     rating: 4.8,
