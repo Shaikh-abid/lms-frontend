@@ -14,6 +14,7 @@ import SignInPage from "./pages/SignInPage";
 import SignUpPage from "./pages/SignUpPage";
 import AboutPage from "./pages/AboutPage";
 import SettingsPage from "./pages/SettingsPage";
+import CouponsPage from "./pages/CouponsPage";
 import InstructorDashboard from "./pages/instructor/InstructorDashboard";
 import AddCoursePage from "./pages/instructor/AddCoursePage";
 
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/course/:id/learn" element={<CourseProgressPage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/my-courses" element={<MyCoursesPage />} />
+          <Route path="/coupons" element={<CouponsPage />} />
           <Route path="/signin" element={<SignInPage />} />
           <Route path="/signup" element={<SignUpPage />} />
           <Route path="/about" element={<AboutPage />} />
