@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { GraduationCap, Mail, Lock, ArrowRight } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { loginApi } from '@/backend-apis/auth-apis/auth.apis';
 
 const SignInPage = () => {
   const navigate = useNavigate();
@@ -18,26 +19,24 @@ const SignInPage = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
+    const loginResponse = await loginApi({ email, password })
 
-    // Mock login - in real app, this would call your API
-    const isInstructor = email.includes('instructor');
-    
     login({
-      id: '1',
-      name: isInstructor ? 'John Instructor' : 'John Student',
-      email,
-      role: isInstructor ? 'instructor' : 'student',
+      _id: loginResponse.data._id,
+      name: loginResponse.data.name,
+      email: loginResponse.data.email,
+      role: loginResponse.data.role,
+      avatar: loginResponse.data.avatar,
     });
+    setIsLoading(false);
 
     toast({
       title: 'Welcome back!',
       description: 'You have successfully signed in.',
     });
 
-    setIsLoading(false);
-    navigate(isInstructor ? '/instructor/dashboard' : '/');
+    navigate(loginResponse.data.role === 'instructor' ? '/instructor/dashboard' : '/');
   };
 
   return (
@@ -83,9 +82,9 @@ const SignInPage = () => {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Password</Label>
-                  <a href="#" className="text-sm text-primary hover:underline">
+                  {/* <a href="#" className="text-sm text-primary hover:underline">
                     Forgot password?
-                  </a>
+                  </a> */}
                 </div>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />

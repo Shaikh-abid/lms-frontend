@@ -31,6 +31,7 @@ const Navbar = () => {
   ];
 
   const handleLogout = () => {
+    localStorage.clear();
     logout();
     navigate('/');
   };
@@ -53,11 +54,10 @@ const Navbar = () => {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`text-sm font-medium transition-colors hover:text-primary ${
-                  isActive(link.path)
+                className={`text-sm font-medium transition-colors hover:text-primary ${isActive(link.path)
                     ? 'text-primary'
                     : 'text-muted-foreground'
-                }`}
+                  }`}
               >
                 {link.label}
               </Link>
@@ -65,11 +65,10 @@ const Navbar = () => {
             {isAuthenticated && user?.role === 'student' && (
               <Link
                 to="/my-courses"
-                className={`text-sm font-medium transition-colors hover:text-primary ${
-                  isActive('/my-courses')
+                className={`text-sm font-medium transition-colors hover:text-primary ${isActive('/my-courses')
                     ? 'text-primary'
                     : 'text-muted-foreground'
-                }`}
+                  }`}
               >
                 My Courses
               </Link>
@@ -77,11 +76,10 @@ const Navbar = () => {
             {isAuthenticated && user?.role === 'instructor' && (
               <Link
                 to="/instructor/dashboard"
-                className={`text-sm font-medium transition-colors hover:text-primary ${
-                  location.pathname.startsWith('/instructor')
+                className={`text-sm font-medium transition-colors hover:text-primary ${location.pathname.startsWith('/instructor')
                     ? 'text-primary'
                     : 'text-muted-foreground'
-                }`}
+                  }`}
               >
                 Instructor Dashboard
               </Link>
@@ -91,16 +89,20 @@ const Navbar = () => {
           {/* Right Side Actions */}
           <div className="hidden md:flex items-center gap-4">
             {/* Cart */}
-            <Link to="/cart" className="relative">
-              <Button variant="ghost" size="icon" className="relative">
-                <ShoppingCart className="h-5 w-5" />
-                {items.length > 0 && (
-                  <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs gradient-accent border-0">
-                    {items.length}
-                  </Badge>
-                )}
-              </Button>
-            </Link>
+            {
+              user && (
+                <Link to="/cart" className="relative">
+                  <Button variant="ghost" size="icon" className="relative">
+                    <ShoppingCart className="h-5 w-5" />
+                    {items.length > 0 && (
+                      <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs gradient-accent border-0">
+                        {items.length}
+                      </Badge>
+                    )}
+                  </Button>
+                </Link>
+              )
+            }
 
             {isAuthenticated ? (
               <DropdownMenu>
@@ -170,9 +172,8 @@ const Navbar = () => {
                 <Link
                   key={link.path}
                   to={link.path}
-                  className={`text-sm font-medium transition-colors ${
-                    isActive(link.path) ? 'text-primary' : 'text-muted-foreground'
-                  }`}
+                  className={`text-sm font-medium transition-colors ${isActive(link.path) ? 'text-primary' : 'text-muted-foreground'
+                    }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   {link.label}

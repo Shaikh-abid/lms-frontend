@@ -2,39 +2,50 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 export interface Course {
-  id: string;
-  title: string;
+  _id: string;
+  instructor: {
+    name: string;
+    _id: string;
+    avatar: string;
+  },
+  courseTitle: string;
+  subtitle: string;
   description: string;
-  instructor: string;
   instructorId: string;
   thumbnail: string;
   price: number;
   originalPrice?: number;
   rating: number;
-  studentsCount: number;
+  studentsEnrolled: string[];
+  isPublished: boolean;
+  courseFor: string;
+  courseOverview: string;
+  coursePrerequisites: string;
+  courseObjectives?: string;
   duration: string;
   level: 'Beginner' | 'Intermediate' | 'Advanced';
   category: string;
   language: string;
   isBestseller?: boolean;
   isNew?: boolean;
-  curriculum?: CourseSection[];
+  courseContent?: CourseSection[];
 }
 
 export interface CourseSection {
-  id: string;
-  title: string;
+  _id: string;
+  sectionTitle: string;
   lectures: Lecture[];
 }
 
 export interface Lecture {
-  id: string;
+  _id: string;
   title: string;
-  description?: string;
-  duration: string;
-  videoUrl: string;
-  isFreePreview: boolean;
+  videoDescription?: string;
   notes?: string;
+  publicId?: string;
+  duration?: string;
+  videoUrl: string;
+  freePreview: boolean;
 }
 
 interface CartState {
@@ -52,17 +63,17 @@ export const useCartStore = create<CartState>()(
       items: [],
       addToCart: (course) =>
         set((state) => {
-          if (state.items.find((item) => item.id === course.id)) {
+          if (state.items.find((item) => item._id === course._id)) {
             return state;
           }
           return { items: [...state.items, course] };
         }),
       removeFromCart: (courseId) =>
         set((state) => ({
-          items: state.items.filter((item) => item.id !== courseId),
+          items: state.items.filter((item) => item._id !== courseId),
         })),
       clearCart: () => set({ items: [] }),
-      isInCart: (courseId) => get().items.some((item) => item.id === courseId),
+      isInCart: (courseId) => get().items.some((item) => item._id === courseId),
       getTotal: () => get().items.reduce((total, item) => total + item.price, 0),
     }),
     {

@@ -62,19 +62,20 @@ const MyCoursesPage = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {purchasedCourses.map((course) => {
-            const progress = courseProgress[course.id]?.progress || 0;
+            const progress = courseProgress[course._id]?.progress || 0;
             const isComplete = progress === 100;
 
             return (
               <div
-                key={course.id}
+                key={course._id}
                 className="bg-card rounded-xl border border-border overflow-hidden hover-lift cursor-pointer group"
-                onClick={() => navigate(`/course/${course.id}/learn`)}
+                onClick={() => navigate(`/course/${course._id}/learn`)}
               >
                 <div className="relative aspect-video">
                   <img
                     src={course.thumbnail}
-                    alt={course.title}
+                    alt={course.
+                      courseTitle}
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute inset-0 bg-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -94,7 +95,8 @@ const MyCoursesPage = () => {
 
                 <div className="p-5 space-y-4">
                   <h3 className="font-semibold line-clamp-2 group-hover:text-primary transition-colors">
-                    {course.title}
+                    {course.
+                      courseTitle}
                   </h3>
 
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">

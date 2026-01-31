@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Star, Clock, Users, ShoppingCart, Play, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '@/store/authStore';
 
 interface CourseCardProps {
   course: Course;
@@ -14,9 +15,10 @@ const CourseCard = ({ course }: CourseCardProps) => {
   const navigate = useNavigate();
   const { addToCart, isInCart } = useCartStore();
   const { isPurchased } = useCourseStore();
+  const { user } = useAuthStore();
 
-  const inCart = isInCart(course.id);
-  const purchased = isPurchased(course.id);
+  const inCart = isInCart(course._id);
+  const purchased = isPurchased(course._id);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -27,9 +29,9 @@ const CourseCard = ({ course }: CourseCardProps) => {
 
   const handleCardClick = () => {
     if (purchased) {
-      navigate(`/course/${course.id}/learn`);
+      navigate(`/course/${course._id}/learn`);
     } else {
-      navigate(`/course/${course.id}`);
+      navigate(`/course/${course._id}`);
     }
   };
 
@@ -42,23 +44,13 @@ const CourseCard = ({ course }: CourseCardProps) => {
       <div className="relative aspect-video overflow-hidden">
         <img
           src={course.thumbnail}
-          alt={course.title}
+          alt={course.courseTitle}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        
+
         {/* Badges */}
         <div className="absolute top-3 left-3 flex gap-2">
-          {course.isBestseller && (
-            <Badge className="gradient-accent text-accent-foreground border-0 text-xs font-semibold">
-              Bestseller
-            </Badge>
-          )}
-          {course.isNew && (
-            <Badge className="bg-success text-success-foreground border-0 text-xs font-semibold">
-              New
-            </Badge>
-          )}
           {purchased && (
             <Badge className="bg-success text-success-foreground border-0 text-xs font-semibold flex items-center gap-1">
               <CheckCircle className="h-3 w-3" />
@@ -86,11 +78,11 @@ const CourseCard = ({ course }: CourseCardProps) => {
 
         {/* Title */}
         <h3 className="font-semibold text-lg line-clamp-2 group-hover:text-primary transition-colors">
-          {course.title}
+          {course.courseTitle}
         </h3>
 
         {/* Instructor */}
-        <p className="text-sm text-muted-foreground">by {course.instructor}</p>
+        <p className="text-sm text-muted-foreground">by {course.instructor.name}</p>
 
         {/* Stats */}
         <div className="flex items-center gap-4 text-sm">
@@ -100,7 +92,7 @@ const CourseCard = ({ course }: CourseCardProps) => {
           </div>
           <div className="flex items-center gap-1 text-muted-foreground">
             <Users className="h-4 w-4" />
-            <span>{course.studentsCount.toLocaleString()}</span>
+            <span>{course.studentsEnrolled?.length.toLocaleString()}</span>
           </div>
           <div className="flex items-center gap-1 text-muted-foreground">
             <Clock className="h-4 w-4" />
@@ -118,7 +110,7 @@ const CourseCard = ({ course }: CourseCardProps) => {
               </span>
             )}
           </div>
-          
+
           {purchased ? (
             <Button size="sm" variant="gradient" className="gap-2">
               <Play className="h-4 w-4" />
@@ -130,10 +122,14 @@ const CourseCard = ({ course }: CourseCardProps) => {
               In Cart
             </Button>
           ) : (
-            <Button size="sm" variant="gradient" onClick={handleAddToCart} className="gap-2">
-              <ShoppingCart className="h-4 w-4" />
-              Add
-            </Button>
+
+            user && <>
+              <Button size="sm" variant="gradient" onClick={handleAddToCart} className="gap-2">
+                <ShoppingCart className="h-4 w-4" />
+                Add
+              </Button>
+            </>
+
           )}
         </div>
       </div>

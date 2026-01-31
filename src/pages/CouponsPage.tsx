@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
-import { useCouponStore } from '@/store/couponStore';
+import { useCouponStore } from '@/store/couponStore'; // Your Zustand store
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,22 +13,32 @@ import {
   Calendar, 
   Percent,
   Clock,
-  Sparkles
+  Sparkles,
+  Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const CouponsPage = () => {
-  const { getActiveCoupons } = useCouponStore();
+  // 1. Get State & Actions from Store
+  const { availableCoupons, fetchPublicCoupons, isLoading } = useCouponStore();
+  
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const activeCoupons = getActiveCoupons();
+  // 2. Fetch Data on Mount
+  useEffect(() => {
+    fetchPublicCoupons();
+  }, [fetchPublicCoupons]);
 
-  const filteredCoupons = activeCoupons.filter(
-    (coupon) =>
-      coupon.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      coupon.courseName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // 3. Filter Logic (Safe navigation for nested objects)
+  const filteredCoupons = availableCoupons.filter((coupon) => {
+    const query = searchQuery.toLowerCase();
+    const codeMatch = coupon.code.toLowerCase().includes(query);
+    // Handle case where populated course data might be missing
+    const courseMatch = coupon.courseId?.courseTitle?.toLowerCase().includes(query) || false;
+    
+    return codeMatch || courseMatch;
+  });
 
   const copyToClipboard = (code: string) => {
     navigator.clipboard.writeText(code);
@@ -91,7 +101,15 @@ const CouponsPage = () => {
       {/* Coupons Grid */}
       <section className="py-8 pb-20">
         <div className="container mx-auto px-4">
-          {filteredCoupons.length === 0 ? (
+          
+          {/* Loading State */}
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+              <p className="text-muted-foreground">Finding the best deals for you...</p>
+            </div>
+          ) : filteredCoupons.length === 0 ? (
+            // Empty State
             <div className="text-center py-16">
               <Ticket className="h-16 w-16 mx-auto text-muted-foreground/50 mb-4" />
               <h3 className="text-xl font-semibold mb-2">No coupons available</h3>
@@ -102,15 +120,17 @@ const CouponsPage = () => {
               </p>
             </div>
           ) : (
+            // Results Grid
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {filteredCoupons.map((coupon) => {
                 const daysRemaining = getDaysRemaining(coupon.validUntil);
-                const usesRemaining = coupon.maxUses - coupon.currentUses;
                 const isExpiringSoon = daysRemaining <= 7;
+                // Backend field: discountPercentage vs Frontend mock: discountPercent
+                const discount = coupon.discountPercentage || coupon.discountPercent; 
 
                 return (
                   <Card
-                    key={coupon.id}
+                    key={coupon._id || coupon.id} // Handle Mongo _id
                     className="glass border-border/50 overflow-hidden hover:shadow-lg transition-shadow"
                   >
                     {/* Discount Banner */}
@@ -128,17 +148,19 @@ const CouponsPage = () => {
                           <Percent className="h-8 w-8" />
                         </div>
                         <div>
-                          <div className="text-4xl font-bold">{coupon.discountPercent}%</div>
+                          <div className="text-4xl font-bold">{discount}%</div>
                           <div className="text-sm opacity-90">OFF</div>
                         </div>
                       </div>
                     </div>
 
                     <CardContent className="p-6 space-y-4">
-                      {/* Course Name */}
+                      {/* Course Name (Safe Navigation) */}
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">Valid for</p>
-                        <h3 className="font-semibold line-clamp-2">{coupon.courseName}</h3>
+                        <h3 className="font-semibold line-clamp-2">
+                          {coupon.courseId?.courseTitle || coupon.courseName || 'Selected Course'}
+                        </h3>
                       </div>
 
                       {/* Coupon Code */}
@@ -166,9 +188,13 @@ const CouponsPage = () => {
                           <Calendar className="h-4 w-4" />
                           <span>Valid until {formatDate(coupon.validUntil)}</span>
                         </div>
-                        <Badge variant="secondary">
-                          {usesRemaining} left
-                        </Badge>
+                        
+                        {/* Optional: Show remaining uses if available */}
+                        {coupon.maxUses && (
+                          <Badge variant="secondary">
+                            Limited Uses
+                          </Badge>
+                        )}
                       </div>
                     </CardContent>
                   </Card>

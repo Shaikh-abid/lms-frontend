@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { useCouponStore, Coupon } from '@/store/couponStore';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,55 +27,118 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Trash2, Ticket, Calendar, Percent } from 'lucide-react';
+import { Plus, Trash2, Ticket, Calendar, Percent, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { mockCourses } from '@/data/courses';
 
-interface CouponManagerProps {
-  instructorId?: string;
-}
+// Import APIs
+import {
+  createCouponApi,
+  getInstructorCouponsApi,
+  deleteCouponApi,
+  updateCouponStatusApi
+} from "@/backend-apis/coupons-apis/coupons.api";
+import { getAllInstructorCoursesApi } from '@/backend-apis/courses-apis/courseCreation.apis';
 
-const CouponManager = ({ instructorId = 'instructor-1' }: CouponManagerProps) => {
-  const { coupons, addCoupon, removeCoupon, toggleCouponStatus } = useCouponStore();
+const CouponManager = () => {
+  // State for Data
+  const [coupons, setCoupons] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
+
+  // Dialog State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  // Form state
+  // Form State
   const [code, setCode] = useState('');
   const [courseId, setCourseId] = useState('');
   const [discountPercent, setDiscountPercent] = useState('');
   const [validFrom, setValidFrom] = useState('');
   const [validUntil, setValidUntil] = useState('');
-  const [maxUses, setMaxUses] = useState('');
+  // const [maxUses, setMaxUses] = useState('');
 
-  const instructorCoupons = coupons.filter((c) => c.createdBy === instructorId);
+  // 1. Fetch Coupons & Courses on Load
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const [couponsData, coursesData] = await Promise.all([
+        getInstructorCouponsApi(),
+        getAllInstructorCoursesApi()
+      ]);
+      setCoupons(couponsData);
+      setCourses(coursesData.courses);
+    } catch (error) {
+      console.error("Failed to load data", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const handleCreateCoupon = () => {
-    if (!code || !courseId || !discountPercent || !validFrom || !validUntil || !maxUses) {
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  // 2. Handle Create Coupon
+  const handleCreateCoupon = async () => {
+    if (!code || !courseId || !discountPercent || !validFrom || !validUntil) {
       toast.error('Please fill in all fields');
       return;
     }
 
-    const course = mockCourses.find((c) => c.id === courseId);
-    if (!course) {
-      toast.error('Course not found');
-      return;
+    setIsCreating(true);
+    try {
+      const payload = {
+        code,
+        courseId,
+        discountPercentage: Number(discountPercent),
+        validFrom,
+        validUntil,
+        // maxUses: Number(maxUses)
+      };
+
+      await createCouponApi(payload);
+
+      toast.success('Coupon created successfully!');
+      setIsDialogOpen(false);
+      resetForm();
+      fetchData(); // Refresh list
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.message || 'Failed to create coupon');
+    } finally {
+      setIsCreating(false);
     }
+  };
 
-    addCoupon({
-      code: code.toUpperCase(),
-      courseId,
-      courseName: course.title,
-      discountPercent: parseInt(discountPercent),
-      validFrom,
-      validUntil,
-      maxUses: parseInt(maxUses),
-      isActive: true,
-      createdBy: instructorId,
-    });
+  // 3. Handle Delete Coupon
+  const handleDeleteCoupon = async (id) => {
+    if (!confirm("Are you sure you want to delete this coupon?")) return;
 
-    toast.success('Coupon created successfully!');
-    setIsDialogOpen(false);
-    resetForm();
+    try {
+      await deleteCouponApi(id);
+      toast.success("Coupon deleted");
+      setCoupons(prev => prev.filter(c => c._id !== id));
+    } catch (error) {
+      toast.error("Failed to delete coupon");
+    }
+  };
+
+  // 4. Handle Status Toggle
+  const handleToggleStatus = async (id, currentStatus) => {
+    // Optimistic Update
+    setCoupons(prev => prev.map(c =>
+      c._id === id ? { ...c, isActive: !currentStatus } : c
+    ));
+
+    try {
+      await updateCouponStatusApi(id, !currentStatus);
+      toast.success("Status updated");
+    } catch (error) {
+      setCoupons(prev => prev.map(c =>
+        c._id === id ? { ...c, isActive: currentStatus } : c
+      ));
+      toast.error("Failed to update status");
+    }
   };
 
   const resetForm = () => {
@@ -85,10 +147,10 @@ const CouponManager = ({ instructorId = 'instructor-1' }: CouponManagerProps) =>
     setDiscountPercent('');
     setValidFrom('');
     setValidUntil('');
-    setMaxUses('');
+    // setMaxUses('');
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -105,11 +167,14 @@ const CouponManager = ({ instructorId = 'instructor-1' }: CouponManagerProps) =>
         </CardTitle>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
+            {/* RESTORED OLD STYLE: Removed hardcoded colors, used variant="gradient" */}
             <Button variant="gradient" size="sm" className="gap-2">
               <Plus className="h-4 w-4" />
               Create Coupon
             </Button>
           </DialogTrigger>
+
+          {/* REMOVED 'bg-white' to fix Dark Mode */}
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -135,10 +200,11 @@ const CouponManager = ({ instructorId = 'instructor-1' }: CouponManagerProps) =>
                   <SelectTrigger className="mt-1.5">
                     <SelectValue placeholder="Choose a course" />
                   </SelectTrigger>
+                  {/* REMOVED 'bg-white' here too */}
                   <SelectContent>
-                    {mockCourses.map((course) => (
-                      <SelectItem key={course.id} value={course.id}>
-                        {course.title}
+                    {courses.map((course) => (
+                      <SelectItem key={course._id} value={course._id}>
+                        {course.courseTitle}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -185,7 +251,7 @@ const CouponManager = ({ instructorId = 'instructor-1' }: CouponManagerProps) =>
                 </div>
               </div>
 
-              <div>
+              {/* <div>
                 <Label htmlFor="maxUses">Maximum Uses</Label>
                 <Input
                   id="maxUses"
@@ -196,17 +262,31 @@ const CouponManager = ({ instructorId = 'instructor-1' }: CouponManagerProps) =>
                   placeholder="e.g., 100"
                   className="mt-1.5"
                 />
-              </div>
+              </div> */}
 
-              <Button onClick={handleCreateCoupon} className="w-full" variant="gradient">
-                Create Coupon
+              {/* RESTORED OLD STYLE BUTTON */}
+              <Button
+                onClick={handleCreateCoupon}
+                className="w-full"
+                variant="gradient"
+                disabled={isCreating}
+              >
+                {isCreating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...
+                  </>
+                ) : 'Create Coupon'}
               </Button>
             </div>
           </DialogContent>
         </Dialog>
       </CardHeader>
       <CardContent>
-        {instructorCoupons.length === 0 ? (
+        {isLoading ? (
+          <div className="flex justify-center py-12 text-muted-foreground">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        ) : coupons.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <Ticket className="h-12 w-12 mx-auto mb-3 opacity-50" />
             <p>No coupons created yet</p>
@@ -221,24 +301,23 @@ const CouponManager = ({ instructorId = 'instructor-1' }: CouponManagerProps) =>
                   <TableHead>Course</TableHead>
                   <TableHead>Discount</TableHead>
                   <TableHead>Validity</TableHead>
-                  <TableHead>Uses</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {instructorCoupons.map((coupon) => (
-                  <TableRow key={coupon.id}>
+                {coupons.map((coupon) => (
+                  <TableRow key={coupon._id}>
                     <TableCell>
                       <code className="px-2 py-1 bg-muted rounded font-mono font-semibold">
                         {coupon.code}
                       </code>
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate">
-                      {coupon.courseName}
+                      {coupon.courseId?.courseTitle || 'Unknown Course'}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{coupon.discountPercent}%</Badge>
+                      <Badge variant="secondary">{coupon.discountPercentage}%</Badge>
                     </TableCell>
                     <TableCell className="text-sm">
                       <div className="flex items-center gap-1 text-muted-foreground">
@@ -247,20 +326,17 @@ const CouponManager = ({ instructorId = 'instructor-1' }: CouponManagerProps) =>
                       </div>
                     </TableCell>
                     <TableCell>
-                      {coupon.currentUses}/{coupon.maxUses}
-                    </TableCell>
-                    <TableCell>
                       <Switch
                         checked={coupon.isActive}
-                        onCheckedChange={() => toggleCouponStatus(coupon.id)}
+                        onCheckedChange={() => handleToggleStatus(coupon._id, coupon.isActive)}
                       />
                     </TableCell>
                     <TableCell className="text-right">
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => removeCoupon(coupon.id)}
-                        className="text-destructive hover:text-destructive"
+                        onClick={() => handleDeleteCoupon(coupon._id)}
+                        className="text-destructive hover:text-destructive hover:bg-red-50"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

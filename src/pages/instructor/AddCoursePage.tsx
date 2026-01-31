@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,10 +32,17 @@ import {
   GripVertical,
   Play,
   Check,
+  X,
   AlertCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { categories, levels, languages } from '@/data/courses';
+import {
+  createCourseApi, addSectionsApi, addLecturesApi, getCourseByIdApi,
+  updateCourseApi,
+  updateCourseLectureApi
+} from '@/backend-apis/courses-apis/courseCreation.apis';
+
 
 interface Lecture {
   id: string;
@@ -45,6 +52,8 @@ interface Lecture {
   videoUrl: string;
   duration: string;
   isFreePreview: boolean;
+  videoFile?: File | null;
+  videoPreviewUrl?: string;
 }
 
 interface Section {
@@ -56,7 +65,14 @@ interface Section {
 const AddCoursePage = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('landing');
-  
+
+
+
+
+
+
+
+
   // Landing Page State
   const [bannerImage, setBannerImage] = useState<string | null>(null);
   const [title, setTitle] = useState('');
@@ -68,6 +84,66 @@ const AddCoursePage = () => {
   const [level, setLevel] = useState('');
   const [language, setLanguage] = useState('');
   const [duration, setDuration] = useState('');
+  const [whatYouWillLearn, setWhatYouWillLearn] = useState<string>('');
+  const [requirements, setRequirements] = useState<string>('');
+  const [courseFor, setCourseFor] = useState<string>('');
+
+  // Add these new state variables to your component:
+  const [isLoading, setIsLoading] = useState(false);
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+
+  const { id } = useParams();
+
+  useEffect(() => {
+    if (id) {
+      const fetchCourseData = async () => {
+        try {
+          const data = await getCourseByIdApi(id); //
+
+          // A. Populate Basic Info
+          setTitle(data.courseTitle);
+          setSubtitle(data.subtitle);
+          setDescription(data.description);
+          setPrice(data.price);
+          setOriginalPrice(data.originalPrice);
+          setCategory(data.category);
+          setLevel(data.level);
+          setLanguage(data.language);
+          setDuration(data.duration);
+          setWhatYouWillLearn(data.courseOverview);
+          setRequirements(data.coursePrerequisites);
+          setCourseFor(data.courseFor);
+          setBannerImage(data.thumbnail); // Cloudinary URL acts as the preview
+
+          // B. Populate Curriculum (The Tricky Part)
+          // We map the database structure to your 'Section' interface
+          const mappedSections = data.courseContent.map((sec) => ({
+            id: sec._id, // Real MongoDB ID
+            title: sec.sectionTitle,
+            lectures: sec.lectures.map((lec) => ({
+              id: lec._id, // Real MongoDB ID
+              title: lec.title,
+              description: lec.videoDescription || '', // Handle potential missing fields
+              notes: lec.notes || '',
+              videoUrl: lec.videoUrl,
+              duration: lec.duration || '',
+              isFreePreview: lec.freePreview,
+              videoFile: null, // No new file yet
+              videoPreviewUrl: lec.videoUrl // Use existing URL as preview
+            }))
+          }));
+
+          setSections(mappedSections);
+
+        } catch (error) {
+          console.error("Failed to fetch course", error);
+          toast.error("Failed to load course details");
+        }
+      };
+
+      fetchCourseData();
+    }
+  }, [id]);
 
   // Curriculum State
   const [sections, setSections] = useState<Section[]>([
@@ -89,7 +165,11 @@ const AddCoursePage = () => {
   ]);
 
   const hasFreePreview = sections.some((section) =>
-    section.lectures.some((lecture) => lecture.isFreePreview && lecture.videoUrl)
+    section.lectures.some(
+      (lecture) =>
+        lecture.isFreePreview &&
+        (lecture.videoFile || lecture.videoUrl) // <--- Fix here: Check for File OR Url
+    )
   );
 
   const addSection = () => {
@@ -130,20 +210,23 @@ const AddCoursePage = () => {
       prev.map((s) =>
         s.id === sectionId
           ? {
-              ...s,
-              lectures: [
-                ...s.lectures,
-                {
-                  id: `l${Date.now()}`,
-                  title: '',
-                  description: '',
-                  notes: '',
-                  videoUrl: '',
-                  duration: '',
-                  isFreePreview: false,
-                },
-              ],
-            }
+            ...s,
+            lectures: [
+              ...s.lectures,
+              {
+                id: `l${Date.now()}`,
+                title: '',
+                description: '',
+                notes: '',
+                videoUrl: '',
+                duration: '',
+                isFreePreview: false,
+                // Initialize these
+                videoFile: null,
+                videoPreviewUrl: '',
+              },
+            ],
+          }
           : s
       )
     );
@@ -154,9 +237,9 @@ const AddCoursePage = () => {
       prev.map((s) =>
         s.id === sectionId
           ? {
-              ...s,
-              lectures: s.lectures.filter((l) => l.id !== lectureId),
-            }
+            ...s,
+            lectures: s.lectures.filter((l) => l.id !== lectureId),
+          }
           : s
       )
     );
@@ -166,17 +249,18 @@ const AddCoursePage = () => {
     sectionId: string,
     lectureId: string,
     field: keyof Lecture,
-    value: string | boolean
+    value: string | boolean | File | null // <--- Updated to accept Files
   ) => {
+
     setSections((prev) =>
       prev.map((s) =>
         s.id === sectionId
           ? {
-              ...s,
-              lectures: s.lectures.map((l) =>
-                l.id === lectureId ? { ...l, [field]: value } : l
-              ),
-            }
+            ...s,
+            lectures: s.lectures.map((l) =>
+              l.id === lectureId ? { ...l, [field]: value } : l
+            ),
+          }
           : s
       )
     );
@@ -185,6 +269,10 @@ const AddCoursePage = () => {
   const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // 1. Store the actual File object for FormData upload
+      setThumbnailFile(file);
+
+      // 2. Read the file for the display preview (already doing this)
       const reader = new FileReader();
       reader.onload = () => {
         setBannerImage(reader.result as string);
@@ -193,12 +281,21 @@ const AddCoursePage = () => {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    // --- 1. Basic Validation ---
     if (!title || !description || !price || !category || !level || !language) {
       toast.error('Please fill in all required fields in the Landing Page tab');
       setActiveTab('landing');
       return;
     }
+
+    if (!thumbnailFile) {
+      toast.error('Please upload a Course Banner image');
+      setActiveTab('landing');
+      return;
+    }
+
+
 
     if (!hasFreePreview) {
       toast.error('Please mark at least one lecture with a video as Free Preview');
@@ -206,9 +303,183 @@ const AddCoursePage = () => {
       return;
     }
 
-    // Here you would submit to the backend
-    toast.success('Course created successfully!');
-    navigate('/instructor/dashboard');
+    // --- 2. Start Creation Process ---
+    setIsLoading(true);
+    const toastId = toast.loading('Initializing course creation...', { duration: Infinity }); // Persistent toast
+
+    try {
+      // ==========================================
+      // STEP 1: CREATE COURSE (With Thumbnail)
+      // ==========================================
+      const courseFormData = new FormData();
+      courseFormData.append('courseTitle', title);
+      courseFormData.append('subtitle', subtitle);
+      courseFormData.append('description', description);
+      courseFormData.append('price', price);
+      courseFormData.append('originalPrice', originalPrice);
+      courseFormData.append('category', category);
+      courseFormData.append('level', level);
+      courseFormData.append('language', language);
+      courseFormData.append('duration', duration);
+      courseFormData.append('courseOverview', whatYouWillLearn);
+      courseFormData.append('coursePrerequisites', requirements);
+      courseFormData.append('courseFor', courseFor);
+
+      // Append the thumbnail file
+      if (thumbnailFile) {
+        courseFormData.append('thumbnail', thumbnailFile);
+      }
+
+      toast.loading('Step 1/3: Creating Course & Uploading Thumbnail...', { id: toastId });
+
+      const courseRes = await createCourseApi(courseFormData);
+
+      const courseId = courseRes._id; // We need this ID for the next steps
+
+      // ==========================================
+      // STEP 2: CREATE SECTIONS
+      // ==========================================
+      toast.loading('Step 2/3: Creating Curriculum Structure...', { id: toastId });
+
+      for (const section of sections) {
+        // Create the section
+        const sectionRes = await addSectionsApi(
+          { sectionTitle: section.title },
+          courseId
+        );
+
+        // The backend returns the updated course object.
+        // We need to find the ID of the section we just added.
+        // It's the last item in the courseContent array.
+        const createdSection = sectionRes.courseContent[sectionRes.courseContent.length - 1];
+        const sectionId = createdSection._id;
+
+        // ==========================================
+        // STEP 3: UPLOAD LECTURES (Videos)
+        // ==========================================
+        for (const lecture of section.lectures) {
+          // Validate: Only upload if we have a title and a file
+          if (!lecture.title || !lecture.videoFile) {
+            console.warn(`Skipping lecture "${lecture.title}" - missing file or title`);
+            continue;
+          }
+
+          toast.loading(`Uploading: ${lecture.title}... (This may take time)`, { id: toastId });
+
+          const lectureFormData = new FormData();
+          lectureFormData.append('title', lecture.title);
+          lectureFormData.append('videoDescription', lecture.description);
+          lectureFormData.append('notes', lecture.notes);
+          lectureFormData.append('isFreePreview', String(lecture.isFreePreview)); // Convert boolean to string
+          lectureFormData.append('video', lecture.videoFile); // The actual video file
+
+          // API Call to add lecture
+          await addLecturesApi(lectureFormData, courseId, sectionId);
+        }
+      }
+
+      // --- DONE ---
+      toast.success('Course published successfully!', { id: toastId });
+
+      // Redirect to Dashboard or the Course Page
+      navigate('/instructor/dashboard');
+
+    } catch (error) {
+      console.error(error);
+      const errorMsg = error.response?.data?.message || 'Something went wrong';
+      toast.error(`Error: ${errorMsg}`, { id: toastId });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUpdate = async () => {
+    // 1. Basic Validation
+    if (!title || !description || !price) {
+      toast.error('Please fill in required fields');
+      return;
+    }
+
+    setIsLoading(true);
+    const toastId = toast.loading('Updating course...', { duration: Infinity });
+
+    try {
+      // ==========================================
+      // STEP 1: UPDATE BASIC COURSE INFO
+      // ==========================================
+      const courseData = {
+        courseTitle: title,
+        subtitle,
+        description,
+        price,
+        originalPrice,
+        category,
+        level,
+        language,
+        duration,
+        courseOverview: whatYouWillLearn,
+        coursePrerequisites: requirements,
+        courseFor,
+        // We handle thumbnail separately via formData if it's a new file
+        // but your updateCourseApi expects JSON or FormData depending on backend implementation.
+        // Assuming your backend 'updateCourse' can handle mixed data, 
+        // OR we send a separate FormData if a new image exists.
+      };
+
+      // If a NEW thumbnail is uploaded, we must use FormData
+      // If no new thumbnail, we just send JSON (or FormData without file)
+      // *Based on your backend code, it expects multipart/form-data*
+      const formData = new FormData();
+      Object.keys(courseData).forEach(key => formData.append(key, courseData[key]));
+
+      if (thumbnailFile) {
+        formData.append('thumbnail', thumbnailFile);
+      }
+
+      // Call Update Course API
+      await updateCourseApi(formData, id); //
+
+      // ==========================================
+      // STEP 2: UPDATE LECTURES
+      // ==========================================
+      // Note: This logic updates EXISTING lectures. 
+      // If you added a NEW section in Edit mode, this loop needs 
+      // check if 'section.id' is a real ID or a Date.now() timestamp.
+
+      let lectureCount = 0;
+      for (const section of sections) {
+        for (const lecture of section.lectures) {
+          lectureCount++;
+          toast.loading(`Updating Lecture ${lectureCount}...`, { id: toastId });
+
+          const lectureFormData = new FormData();
+          lectureFormData.append('title', lecture.title);
+          lectureFormData.append('videoDescription', lecture.description);
+          lectureFormData.append('notes', lecture.notes);
+          lectureFormData.append('isFreePreview', String(lecture.isFreePreview));
+
+          // Only append video if a NEW file was selected
+          if (lecture.videoFile) {
+            lectureFormData.append('video', lecture.videoFile);
+          }
+
+          // Call Update Lecture API
+          // Note: This requires the lecture to have a Real Database ID
+          if (lecture.id.length > 10) { // Simple check to ensure it's a MongoDB ID, not Date.now()
+            await updateCourseLectureApi(lectureFormData, id, section.id, lecture.id); //
+          }
+        }
+      }
+
+      toast.success('Course updated successfully!', { id: toastId });
+      navigate('/instructor/dashboard');
+
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to update course", { id: toastId });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -216,9 +487,11 @@ const AddCoursePage = () => {
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold gradient-text">Create New Course</h1>
+          <h1 className="text-3xl font-bold gradient-text">
+            {id ? 'Edit Course' : 'Create New Course'}
+          </h1>
           <p className="text-muted-foreground mt-1">
-            Fill in the details below to create your course
+            {id ? 'Update your course content details' : 'Fill in the details below to create your course'}
           </p>
         </div>
 
@@ -250,11 +523,10 @@ const AddCoursePage = () => {
                 </CardHeader>
                 <CardContent>
                   <div
-                    className={`relative border-2 border-dashed rounded-xl overflow-hidden transition-colors ${
-                      bannerImage
-                        ? 'border-primary/50'
-                        : 'border-border hover:border-primary/50'
-                    }`}
+                    className={`relative border-2 border-dashed rounded-xl overflow-hidden transition-colors ${bannerImage
+                      ? 'border-primary/50'
+                      : 'border-border hover:border-primary/50'
+                      }`}
                   >
                     {bannerImage ? (
                       <div className="relative aspect-video">
@@ -433,6 +705,8 @@ const AddCoursePage = () => {
               </CardHeader>
               <CardContent>
                 <Textarea
+                  value={whatYouWillLearn}
+                  onChange={(e) => setWhatYouWillLearn(e.target.value)}
                   placeholder="• Build 16 web development projects&#10;• Learn HTML5, CSS3, JavaScript&#10;• Master React and Node.js"
                   className="min-h-[200px]"
                 />
@@ -445,6 +719,8 @@ const AddCoursePage = () => {
               </CardHeader>
               <CardContent>
                 <Textarea
+                  value={requirements}
+                  onChange={(e) => setRequirements(e.target.value)}
                   placeholder="• No programming experience needed&#10;• A computer with internet access&#10;• Enthusiasm to learn"
                   className="min-h-[150px]"
                 />
@@ -457,6 +733,8 @@ const AddCoursePage = () => {
               </CardHeader>
               <CardContent>
                 <Textarea
+                  value={courseFor}
+                  onChange={(e) => setCourseFor(e.target.value)}
                   placeholder="• Anyone who wants to learn web development&#10;• Students looking to start a career in tech&#10;• Developers wanting to expand their skills"
                   className="min-h-[150px]"
                 />
@@ -532,7 +810,7 @@ const AddCoursePage = () => {
                                           updateLecture(
                                             section.id,
                                             lecture.id,
-                                            'title',
+                                            "title",
                                             e.target.value
                                           )
                                         }
@@ -540,22 +818,64 @@ const AddCoursePage = () => {
                                         className="mt-1.5"
                                       />
                                     </div>
+
+                                    {/* --- MODIFIED VIDEO UPLOAD SECTION --- */}
                                     <div>
-                                      <Label>Video URL</Label>
+                                      <Label>Upload Video</Label>
                                       <Input
-                                        value={lecture.videoUrl}
-                                        onChange={(e) =>
-                                          updateLecture(
-                                            section.id,
-                                            lecture.id,
-                                            'videoUrl',
-                                            e.target.value
-                                          )
-                                        }
-                                        placeholder="https://..."
+                                        type="file"
+                                        accept="video/*"
+                                        onChange={(e) => {
+                                          const file = e.target.files?.[0];
+                                          if (file) {
+                                            // 1. Create a fake URL for preview
+                                            const previewUrl = URL.createObjectURL(file);
+
+                                            // 2. Update state with the File Object (for API)
+                                            updateLecture(
+                                              section.id,
+                                              lecture.id,
+                                              "videoFile",
+                                              file
+                                            );
+
+                                            // 3. Update state with Preview URL (for UI)
+                                            updateLecture(
+                                              section.id,
+                                              lecture.id,
+                                              "videoPreviewUrl",
+                                              previewUrl
+                                            );
+                                          }
+                                        }}
                                         className="mt-1.5"
                                       />
+
+                                      {/* VIDEO PREVIEW PLAYER */}
+                                      {lecture.videoPreviewUrl && (
+                                        <div className="mt-3 relative rounded-md overflow-hidden bg-slate-900 aspect-video">
+                                          <video
+                                            src={lecture.videoPreviewUrl}
+                                            controls
+                                            className="w-full h-full object-contain"
+                                          />
+                                          <Button
+                                            variant="destructive"
+                                            size="icon"
+                                            className="absolute top-2 right-2 h-6 w-6 rounded-full opacity-80 hover:opacity-100"
+                                            onClick={() => {
+                                              // Clear the file and preview
+                                              updateLecture(section.id, lecture.id, "videoFile", null);
+                                              updateLecture(section.id, lecture.id, "videoPreviewUrl", "");
+                                            }}
+                                          >
+                                            <X className="h-3 w-3" />
+                                          </Button>
+                                        </div>
+                                      )}
                                     </div>
+                                    {/* ------------------------------------- */}
+
                                   </div>
                                   <div>
                                     <Label>Description</Label>
@@ -565,7 +885,7 @@ const AddCoursePage = () => {
                                         updateLecture(
                                           section.id,
                                           lecture.id,
-                                          'description',
+                                          "description",
                                           e.target.value
                                         )
                                       }
@@ -581,7 +901,7 @@ const AddCoursePage = () => {
                                         updateLecture(
                                           section.id,
                                           lecture.id,
-                                          'notes',
+                                          "notes",
                                           e.target.value
                                         )
                                       }
@@ -598,17 +918,20 @@ const AddCoursePage = () => {
                                           updateLecture(
                                             section.id,
                                             lecture.id,
-                                            'isFreePreview',
+                                            "isFreePreview",
                                             checked
                                           )
                                         }
                                       />
-                                      <Label htmlFor={`preview-${lecture.id}`} className="cursor-pointer">
+                                      <Label
+                                        htmlFor={`preview-${lecture.id}`}
+                                        className="cursor-pointer"
+                                      >
                                         Free Preview
                                       </Label>
-                                      {lecture.isFreePreview && lecture.videoUrl && (
+                                      {lecture.isFreePreview && lecture.videoPreviewUrl && (
                                         <Badge className="ml-2 bg-green-500/20 text-green-500">
-                                          ✓ Preview
+                                          ✓ Ready
                                         </Badge>
                                       )}
                                     </div>
@@ -669,8 +992,15 @@ const AddCoursePage = () => {
           <Button variant="outline" onClick={() => navigate('/instructor/dashboard')}>
             Cancel
           </Button>
-          <Button variant="gradient" onClick={handleSubmit}>
-            Create Course
+          <Button
+            variant="gradient"
+            disabled={isLoading}
+            onClick={id ? handleUpdate : handleSubmit} // <--- Toggle Logic Here
+          >
+            {isLoading
+              ? (id ? 'Updating...' : 'Creating...')
+              : (id ? 'Update Course' : 'Create Course')
+            }
           </Button>
         </div>
       </div>

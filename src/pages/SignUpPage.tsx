@@ -8,6 +8,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { GraduationCap, Mail, Lock, User, ArrowRight } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
+import { registerApi } from '@/backend-apis/auth-apis/auth.apis';
+
 const SignUpPage = () => {
   const navigate = useNavigate();
   const { login } = useAuthStore();
@@ -24,18 +26,21 @@ const SignUpPage = () => {
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    login({
-      id: Date.now().toString(),
-      name,
-      email,
-      role,
-    });
+    const signUpResponse = await registerApi({ name, email, password, role });
+    // console.log(signUpResponse);
 
+    if (signUpResponse.status === 201) {
+      login({
+        _id: signUpResponse.data._id,
+        name: signUpResponse.data.name,
+        email: signUpResponse.data.email,
+        role: signUpResponse.data.role,
+      });
+    }
     toast({
       title: 'Account created!',
-      description: 'Welcome to LMS System. Start your learning journey!',
+      description: `Welcome ${signUpResponse.data.name} to LMS System. Start your learning journey!`,
     });
-
     setIsLoading(false);
     navigate(role === 'instructor' ? '/instructor/dashboard' : '/');
   };

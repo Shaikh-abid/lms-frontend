@@ -3,52 +3,107 @@ import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { mockCourses } from '@/data/courses';
 import CourseCard from '@/components/courses/CourseCard';
-import { 
-  GraduationCap, 
-  PlayCircle, 
-  Award, 
-  Users, 
+import {
+  GraduationCap,
+  PlayCircle,
+  Award,
+  Users,
   BookOpen,
   ArrowRight,
   CheckCircle,
   Sparkles,
   Target,
-  Zap
+  Zap,
+  Loader2
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useAuthStore } from '@/store/authStore';
+import { getAllCoursesForInstructorApi } from '@/backend-apis/instructure-apis/instructure.api';
+import { getAllCourseStudentViewApi } from '@/backend-apis/student-apis/student.api';
+
+const stats = [
+  { icon: Users, value: '500K+', label: 'Active Students' },
+  { icon: BookOpen, value: '1000+', label: 'Quality Courses' },
+  { icon: Award, value: '150+', label: 'Expert Instructors' },
+  { icon: PlayCircle, value: '10M+', label: 'Video Lessons' },
+];
+
+const features = [
+  {
+    icon: Sparkles,
+    title: 'Expert-Led Courses',
+    description: 'Learn from industry professionals with years of real-world experience.',
+  },
+  {
+    icon: Target,
+    title: 'Hands-On Projects',
+    description: 'Build real projects that you can add to your portfolio and resume.',
+  },
+  {
+    icon: Zap,
+    title: 'Lifetime Access',
+    description: 'Once enrolled, access your courses forever with free updates.',
+  },
+  {
+    icon: Award,
+    title: 'Certificates',
+    description: 'Earn recognized certificates to showcase your new skills.',
+  },
+];
+
 
 const Index = () => {
   const navigate = useNavigate();
-  const topCourses = mockCourses.slice(0, 6);
+  const [coursesToShow, setCoursesToShow] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuthStore();
 
-  const stats = [
-    { icon: Users, value: '500K+', label: 'Active Students' },
-    { icon: BookOpen, value: '1000+', label: 'Quality Courses' },
-    { icon: Award, value: '150+', label: 'Expert Instructors' },
-    { icon: PlayCircle, value: '10M+', label: 'Video Lessons' },
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        let response;
+        const commonParams = {
+          searchQuery: "",
+          selectedCategories: [],
+          selectedLevels: [],
+          selectedLanguages: [],
+          sortBy: "",
+        };
 
-  const features = [
-    {
-      icon: Sparkles,
-      title: 'Expert-Led Courses',
-      description: 'Learn from industry professionals with years of real-world experience.',
-    },
-    {
-      icon: Target,
-      title: 'Hands-On Projects',
-      description: 'Build real projects that you can add to your portfolio and resume.',
-    },
-    {
-      icon: Zap,
-      title: 'Lifetime Access',
-      description: 'Once enrolled, access your courses forever with free updates.',
-    },
-    {
-      icon: Award,
-      title: 'Certificates',
-      description: 'Earn recognized certificates to showcase your new skills.',
-    },
-  ];
+        // If user is instructor, show instructor-specific data
+        if (user?.role === "instructor") {
+          response = await getAllCoursesForInstructorApi(commonParams);
+          if (response?.success) {
+            setCoursesToShow(response.courses || []);
+          }
+        }
+        // Default case: Show Student View API for both Students and Guests (No User)
+        else {
+          response = await getAllCourseStudentViewApi(commonParams);
+          if (response?.success) {
+            // Note: Keeping response.data as per your original snippet logic
+            setCoursesToShow(response.data || []);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch courses", error);
+        setCoursesToShow([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // We no longer wrap this in "if (user)". 
+    // It will trigger on initial load for guests.
+    const timer = setTimeout(() => {
+      fetchData();
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [user]); // Re-run if login status changes
+
+
 
   return (
     <MainLayout>
@@ -58,7 +113,7 @@ const Index = () => {
         <div className="absolute inset-0 gradient-hero opacity-5" />
         <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-pulse-slow" />
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/20 rounded-full blur-3xl animate-pulse-slow" />
-        
+
         <div className="container mx-auto px-4 py-20 lg:py-32 relative">
           <div className="max-w-4xl mx-auto text-center space-y-8">
             {/* Badge */}
@@ -80,17 +135,17 @@ const Index = () => {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up delay-200">
-              <Button 
-                variant="hero" 
-                size="xl" 
+              <Button
+                variant="hero"
+                size="xl"
                 onClick={() => navigate('/courses')}
                 className="gap-2"
               >
                 Explore Courses
                 <ArrowRight className="h-5 w-5" />
               </Button>
-              <Button 
-                variant="hero-outline" 
+              <Button
+                variant="hero-outline"
                 size="xl"
                 onClick={() => navigate('/signup')}
               >
@@ -115,8 +170,8 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
-              <div 
-                key={stat.label} 
+              <div
+                key={stat.label}
                 className="text-center space-y-2 animate-fade-in"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
@@ -143,22 +198,34 @@ const Index = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {topCourses.map((course, index) => (
-              <div 
-                key={course.id} 
-                className="animate-fade-in"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <CourseCard course={course} />
-              </div>
-            ))}
-          </div>
+          {loading ? (
+            <div className="flex justify-center items-center h-64">
+              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {coursesToShow.length > 0 ? (
+                coursesToShow.map((course, index) => (
+                  <div
+                    key={course._id || index}
+                    className="animate-fade-in"
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    <CourseCard course={course} />
+                  </div>
+                ))
+              ) : (
+                <div className="col-span-full text-center py-10 text-muted-foreground">
+                  No courses found at the moment.
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="text-center mt-12">
-            <Button 
-              variant="outline" 
-              size="lg" 
+            <Button
+              variant="outline"
+              size="lg"
               onClick={() => navigate('/courses')}
               className="gap-2"
             >
@@ -186,8 +253,8 @@ const Index = () => {
 
               <div className="space-y-6">
                 {features.map((feature, index) => (
-                  <div 
-                    key={feature.title} 
+                  <div
+                    key={feature.title}
                     className="flex gap-4 animate-fade-in"
                     style={{ animationDelay: `${index * 100}ms` }}
                   >
@@ -232,9 +299,9 @@ const Index = () => {
                   ))}
                 </div>
 
-                <Button 
-                  variant="hero" 
-                  className="w-full" 
+                <Button
+                  variant="hero"
+                  className="w-full"
                   size="lg"
                   onClick={() => navigate('/signup')}
                 >
@@ -259,16 +326,16 @@ const Index = () => {
                 Join our community of learners and get access to thousands of courses, expert instructors, and a supportive community.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button 
-                  variant="secondary" 
+                <Button
+                  variant="secondary"
                   size="xl"
                   onClick={() => navigate('/signup')}
                   className="bg-background text-foreground hover:bg-background/90"
                 >
                   Create Free Account
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="xl"
                   onClick={() => navigate('/courses')}
                   className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10"

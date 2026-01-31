@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { useCartStore } from '@/store/cartStore';
 import { useCourseStore } from '@/store/courseStore';
@@ -5,15 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
+import CheckoutModal from '@/components/checkout/CheckoutModal';
 
 const CartPage = () => {
   const { items, removeFromCart, clearCart, getTotal } = useCartStore();
   const { purchaseCourses } = useCourseStore();
   const navigate = useNavigate();
+  const [showCheckout, setShowCheckout] = useState(false);
 
-  const handleCheckout = () => {
-    if (items.length === 0) return;
-    
+  const handleCheckoutComplete = () => {
     purchaseCourses(items);
     clearCart();
     toast({
@@ -56,17 +57,17 @@ const CartPage = () => {
             
             {items.map((course) => (
               <div
-                key={course.id}
+                key={course._id}
                 className="flex gap-4 p-4 bg-card rounded-xl border border-border"
               >
                 <img
                   src={course.thumbnail}
-                  alt={course.title}
+                  alt={course.courseTitle}
                   className="w-32 h-20 object-cover rounded-lg"
                 />
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold line-clamp-1">{course.title}</h3>
-                  <p className="text-sm text-muted-foreground">{course.instructor}</p>
+                  <h3 className="font-semibold line-clamp-1">{course.courseTitle}</h3>
+                  <p className="text-sm text-muted-foreground">{course.instructor.name}</p>
                   <div className="flex items-center gap-2 mt-2">
                     <span className="font-bold text-primary">₹{course.price}</span>
                     {course.originalPrice && (
@@ -80,7 +81,7 @@ const CartPage = () => {
                   variant="ghost"
                   size="icon"
                   className="text-destructive hover:text-destructive"
-                  onClick={() => removeFromCart(course.id)}
+                  onClick={() => removeFromCart(course._id)}
                 >
                   <Trash2 className="h-5 w-5" />
                 </Button>
@@ -114,7 +115,7 @@ const CartPage = () => {
                 variant="gradient"
                 className="w-full"
                 size="lg"
-                onClick={handleCheckout}
+                onClick={() => setShowCheckout(true)}
               >
                 Checkout
                 <ArrowRight className="h-5 w-5 ml-2" />
@@ -127,6 +128,13 @@ const CartPage = () => {
           </div>
         </div>
       </div>
+
+      <CheckoutModal
+        open={showCheckout}
+        onOpenChange={setShowCheckout}
+        courses={items}
+        onCheckoutComplete={handleCheckoutComplete}
+      />
     </MainLayout>
   );
 };

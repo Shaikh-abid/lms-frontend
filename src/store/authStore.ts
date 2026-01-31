@@ -4,7 +4,7 @@ import { persist } from 'zustand/middleware';
 export type UserRole = 'student' | 'instructor' | null;
 
 interface User {
-  id: string;
+  _id: string;
   name: string;
   email: string;
   role: UserRole;
