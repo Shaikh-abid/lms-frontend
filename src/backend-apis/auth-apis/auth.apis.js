@@ -1,6 +1,6 @@
 import axiosInstance from "../../lib/axiosInstance";
 
-const BASE_URL = "http://localhost:5000/";
+const BASE_URL = "https://lms-backend-lgwf.onrender.com/";
 
 export const loginApi = (data) => {
   return axiosInstance.post(`${BASE_URL}api/auth/login`, data);

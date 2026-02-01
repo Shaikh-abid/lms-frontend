@@ -1,6 +1,6 @@
 import axiosInstance from "../../lib/axiosInstance";
 
-const BASE_URL = "http://localhost:5000/api/cart"; // Adjust to your route prefix
+const BASE_URL = "https://lms-backend-lgwf.onrender.com/api/cart"; // Adjust to your route prefix
 
 export const addToCartApi = async (courseId: string) => {
   const response = await axiosInstance.post(`${BASE_URL}/add`, { courseId });

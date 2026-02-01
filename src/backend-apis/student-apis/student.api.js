@@ -1,6 +1,6 @@
 import axiosInstance from "../../lib/axiosInstance";
 
-const BASE_URL = "http://localhost:5000/api/";
+const BASE_URL = "https://lms-backend-lgwf.onrender.com/api/";
 
 export const getAllCourseStudentViewApi = async (filters) => {
   // send all filter in the query
