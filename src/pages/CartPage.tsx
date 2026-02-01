@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { useCartStore } from '@/store/cartStore';
 import { useCourseStore } from '@/store/courseStore';
@@ -7,12 +7,48 @@ import { Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import CheckoutModal from '@/components/checkout/CheckoutModal';
+// Import API functions
+import { getCartItemsApi, removeFromCartApi } from "../backend-apis/cart-apis/cart.apis";
 
 const CartPage = () => {
-  const { items, removeFromCart, clearCart, getTotal } = useCartStore();
+  // Destructure setCart and removeFromCart
+  const { items, removeFromCart, setCart, clearCart, getTotal } = useCartStore();
   const { purchaseCourses } = useCourseStore();
   const navigate = useNavigate();
   const [showCheckout, setShowCheckout] = useState(false);
+
+  // 1. Fetch Cart on Mount
+  useEffect(() => {
+    const fetchCartItems = async () => {
+      try {
+        const response = await getCartItemsApi();
+        if (response.success && response.data) {
+          // Update Store with DB data
+          setCart(response.data); 
+        }
+      } catch (error) {
+        console.error("Failed to fetch cart:", error);
+      }
+    };
+
+    fetchCartItems();
+  }, [setCart]);
+
+  // 2. Handle Remove Item
+  const handleRemoveItem = async (courseId) => {
+    try {
+      // Call API first
+      await removeFromCartApi(courseId);
+      
+      // If API success, update Store
+      removeFromCart(courseId);
+      
+      toast({ title: "Removed from cart" });
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Failed to remove item", variant: "destructive" });
+    }
+  };
 
   const handleCheckoutComplete = () => {
     purchaseCourses(items);
@@ -67,7 +103,7 @@ const CartPage = () => {
                 />
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold line-clamp-1">{course.courseTitle}</h3>
-                  <p className="text-sm text-muted-foreground">{course.instructor.name}</p>
+                  <p className="text-sm text-muted-foreground">{course.instructor?.name}</p>
                   <div className="flex items-center gap-2 mt-2">
                     <span className="font-bold text-primary">₹{course.price}</span>
                     {course.originalPrice && (
@@ -81,7 +117,8 @@ const CartPage = () => {
                   variant="ghost"
                   size="icon"
                   className="text-destructive hover:text-destructive"
-                  onClick={() => removeFromCart(course._id)}
+                  // Call the new handleRemoveItem function
+                  onClick={() => handleRemoveItem(course._id)}
                 >
                   <Trash2 className="h-5 w-5" />
                 </Button>

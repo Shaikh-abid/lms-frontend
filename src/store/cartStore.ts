@@ -1,5 +1,10 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import {
+  addToCartApi,
+  removeFromCartApi,
+  getCartItemsApi,
+} from "../backend-apis/cart-apis/cart.apis";
 
 export interface Course {
   _id: string;
@@ -7,7 +12,7 @@ export interface Course {
     name: string;
     _id: string;
     avatar: string;
-  },
+  };
   courseTitle: string;
   subtitle: string;
   description: string;
@@ -23,7 +28,7 @@ export interface Course {
   coursePrerequisites: string;
   courseObjectives?: string;
   duration: string;
-  level: 'Beginner' | 'Intermediate' | 'Advanced';
+  level: "Beginner" | "Intermediate" | "Advanced";
   category: string;
   language: string;
   isBestseller?: boolean;
@@ -52,6 +57,7 @@ interface CartState {
   items: Course[];
   addToCart: (course: Course) => void;
   removeFromCart: (courseId: string) => void;
+  setCart: (courses: Course[]) => void; // NEW ACTION: To set bulk data
   clearCart: () => void;
   isInCart: (courseId: string) => boolean;
   getTotal: () => number;
@@ -61,23 +67,32 @@ export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
       items: [],
+
+      // Pure Sync: Just updates UI
       addToCart: (course) =>
         set((state) => {
-          if (state.items.find((item) => item._id === course._id)) {
-            return state;
-          }
+          if (state.items.find((item) => item._id === course._id)) return state;
           return { items: [...state.items, course] };
         }),
+
+      // Pure Sync: Just updates UI
       removeFromCart: (courseId) =>
         set((state) => ({
           items: state.items.filter((item) => item._id !== courseId),
         })),
+
+      // Pure Sync: Sets the whole cart (used after API fetch)
+      setCart: (courses) => set({ items: courses }),
+
       clearCart: () => set({ items: [] }),
+
       isInCart: (courseId) => get().items.some((item) => item._id === courseId),
-      getTotal: () => get().items.reduce((total, item) => total + item.price, 0),
+
+      getTotal: () =>
+        get().items.reduce((total, item) => total + item.price, 0),
     }),
     {
-      name: 'cart-storage',
-    }
-  )
+      name: "cart-storage",
+    },
+  ),
 );

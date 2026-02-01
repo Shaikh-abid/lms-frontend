@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Star, Clock, Users, ShoppingCart, Play, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
+import { addToCartApi } from '@/backend-apis/cart-apis/cart.apis'; // 1. Import API
+import { toast } from '@/hooks/use-toast'; // 2. Import Toast
 
 interface CourseCardProps {
   course: Course;
@@ -20,10 +22,40 @@ const CourseCard = ({ course }: CourseCardProps) => {
   const inCart = isInCart(course._id);
   const purchased = isPurchased(course._id);
 
-  const handleAddToCart = (e: React.MouseEvent) => {
+  // 3. Updated Handler to call API
+  const handleAddToCart = async (e: React.MouseEvent) => {
     e.stopPropagation();
+
+    // Safety check (though button is hidden if no user)
+    if (!user) {
+      toast({
+        title: "Please Sign In",
+        description: "You need to be logged in to add items to cart.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!inCart && !purchased) {
-      addToCart(course);
+      try {
+        // A. Call Backend API
+        await addToCartApi(course._id);
+
+        // B. Update Local Store (only if API succeeds)
+        addToCart(course);
+
+        toast({
+          title: "Added to Cart",
+          description: "Course added successfully",
+        });
+      } catch (error) {
+        console.error(error);
+        toast({
+          title: "Error",
+          description: "Failed to add course to cart",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -122,14 +154,13 @@ const CourseCard = ({ course }: CourseCardProps) => {
               In Cart
             </Button>
           ) : (
-
-            user && <>
+            // Only show Add button if user is logged in
+            user && (
               <Button size="sm" variant="gradient" onClick={handleAddToCart} className="gap-2">
                 <ShoppingCart className="h-4 w-4" />
                 Add
               </Button>
-            </>
-
+            )
           )}
         </div>
       </div>
