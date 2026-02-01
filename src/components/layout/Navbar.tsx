@@ -13,9 +13,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { useCourseStore } from '@/store/courseStore';
 
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuthStore();
+  const { reset } = useCourseStore();
   const { items } = useCartStore();
   const navigate = useNavigate();
   const location = useLocation();
@@ -33,6 +35,7 @@ const Navbar = () => {
   const handleLogout = () => {
     localStorage.clear();
     logout();
+    reset();  // Clear Courses & Progress
     navigate('/');
   };
 
@@ -55,8 +58,8 @@ const Navbar = () => {
                 key={link.path}
                 to={link.path}
                 className={`text-sm font-medium transition-colors hover:text-primary ${isActive(link.path)
-                    ? 'text-primary'
-                    : 'text-muted-foreground'
+                  ? 'text-primary'
+                  : 'text-muted-foreground'
                   }`}
               >
                 {link.label}
@@ -66,8 +69,8 @@ const Navbar = () => {
               <Link
                 to="/my-courses"
                 className={`text-sm font-medium transition-colors hover:text-primary ${isActive('/my-courses')
-                    ? 'text-primary'
-                    : 'text-muted-foreground'
+                  ? 'text-primary'
+                  : 'text-muted-foreground'
                   }`}
               >
                 My Courses
@@ -77,8 +80,8 @@ const Navbar = () => {
               <Link
                 to="/instructor/dashboard"
                 className={`text-sm font-medium transition-colors hover:text-primary ${location.pathname.startsWith('/instructor')
-                    ? 'text-primary'
-                    : 'text-muted-foreground'
+                  ? 'text-primary'
+                  : 'text-muted-foreground'
                   }`}
               >
                 Instructor Dashboard

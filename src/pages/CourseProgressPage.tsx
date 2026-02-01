@@ -48,7 +48,7 @@ const CourseProgressPage = () => {
     markLectureComplete, 
     setLastWatched, 
     getCourseProgress,
-    loadCourse // Ensure this is available in your updated store
+    loadCourse
   } = useCourseStore();
   
   const { generateCertificate, getCertificate, hasCertificate } = useCertificateStore();
@@ -56,7 +56,7 @@ const CourseProgressPage = () => {
   const [course, setCourse] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Safely get progress
+  // Safely get progress from store
   const progress = getCourseProgress(id || '');
 
   const [currentLectureId, setCurrentLectureId] = useState('');
@@ -67,9 +67,7 @@ const CourseProgressPage = () => {
   const [showCertificateModal, setShowCertificateModal] = useState(false);
   const [currentVideoTime, setCurrentVideoTime] = useState(0);
 
-  // ------------------------------------------------------------------
-  // FETCHING LOGIC
-  // ------------------------------------------------------------------
+  // Fetching Logic
   useEffect(() => {
     const fetchCourseDetails = async () => {
       if (!id || !user) return;
@@ -86,8 +84,6 @@ const CourseProgressPage = () => {
         if (response?.success) {
            const courseData = response.data?.courseDetails || response.data || response;
            setCourse(courseData);
-           
-           // Sync API data to Zustand Store to initialize progress
            loadCourse(courseData);
         } else {
            setCourse(null);
@@ -103,12 +99,10 @@ const CourseProgressPage = () => {
     fetchCourseDetails();
   }, [id, user, loadCourse]);
 
-  // Helper variables for render
   const currentLecture = course?.courseContent
     ?.flatMap((s: any) => s.lectures)
     .find((l: any) => l._id === currentLectureId);
 
-  // Certificate data
   const certificate = user && course
     ? getCertificate(course._id, user.email)
     : undefined;
@@ -117,13 +111,11 @@ const CourseProgressPage = () => {
     ? hasCertificate(course._id, user.email)
     : false;
 
-  // Initialize State once Course is loaded
+  // Initialize State
   useEffect(() => {
     if (course) {
-        if (user?.role !== "instructor" && !isPurchased(course._id)) {
-            // Optional: navigate(`/course/${course._id}`);
-        }
-
+        // Optional: Redirect if not purchased logic
+        
         const firstLecture = course.courseContent?.[0]?.lectures?.[0];
         const lastWatched = progress?.lastWatchedLecture;
 
@@ -141,7 +133,7 @@ const CourseProgressPage = () => {
     }
   }, [course, isPurchased, navigate, progress?.lastWatchedLecture, user?.role, currentLectureId, expandedSections.length]);
 
-  // Check for course completion
+  // Completion Check
   useEffect(() => {
     if (progress?.progress === 100 && !showCompletionModal && !isCourseCertified && !isLoading) {
       setShowConfetti(true);
@@ -185,7 +177,6 @@ const CourseProgressPage = () => {
     );
   };
 
-  // Safe check for progress existence
   const isLectureCompleted = (lectureId: string) => {
     return progress?.completedLectures?.includes(lectureId) || false;
   };
@@ -225,10 +216,8 @@ const CourseProgressPage = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Confetti Effect */}
       {showConfetti && <Confetti />}
 
-      {/* Completion Modal */}
       {showCompletionModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/50 backdrop-blur-sm animate-fade-in">
           <div className="bg-card rounded-3xl p-8 max-w-md mx-4 text-center space-y-6 shadow-2xl animate-scale-in">
@@ -327,7 +316,6 @@ const CourseProgressPage = () => {
       <div className="flex-1 flex overflow-hidden">
         {/* Video Section */}
         <div className={cn("flex-1 flex flex-col overflow-hidden", isSidebarOpen && "hidden lg:flex")}>
-          {/* Video Player */}
           <div className="bg-foreground aspect-video w-full flex-shrink-0">
             {currentLecture ? (
               <video
@@ -349,7 +337,6 @@ const CourseProgressPage = () => {
             )}
           </div>
 
-          {/* Lecture Info & Notes */}
           <div className="p-6 space-y-6 overflow-auto flex-1">
             {currentLecture && (
               <>
@@ -368,7 +355,6 @@ const CourseProgressPage = () => {
                   )}
                 </div>
 
-                {/* Navigation Buttons */}
                 <div className="flex items-center justify-between">
                   <Button
                     variant="outline"
@@ -388,7 +374,6 @@ const CourseProgressPage = () => {
                   </Button>
                 </div>
 
-                {/* Instructor Notes */}
                 {currentLecture.notes && (
                   <div className="bg-muted rounded-xl p-4 space-y-2">
                     <div className="flex items-center gap-2 font-semibold">
@@ -399,14 +384,6 @@ const CourseProgressPage = () => {
                   </div>
                 )}
 
-                {/* Student Notes Section */}
-                <StudentNotes
-                  courseId={course._id}
-                  lectureId={currentLecture._id}
-                  currentVideoTime={currentVideoTime}
-                />
-
-                {/* Mark Complete Button */}
                 {!isLectureCompleted(currentLecture._id) && (
                   <Button
                     variant="outline"
@@ -422,7 +399,7 @@ const CourseProgressPage = () => {
           </div>
         </div>
 
-        {/* Sidebar - Course Content */}
+        {/* Sidebar */}
         <aside
           className={cn(
             "w-full lg:w-96 border-l border-border bg-card overflow-auto",

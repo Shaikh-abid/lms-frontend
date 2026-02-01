@@ -144,13 +144,17 @@ const Index = () => {
                 Explore Courses
                 <ArrowRight className="h-5 w-5" />
               </Button>
-              <Button
-                variant="hero-outline"
-                size="xl"
-                onClick={() => navigate('/signup')}
-              >
-                Start Free Trial
-              </Button>
+              {
+                !user && (
+                  <Button
+                    variant="hero-outline"
+                    size="xl"
+                    onClick={() => navigate('/signup')}
+                  >
+                    Start Free Trial
+                  </Button>
+                )
+              }
             </div>
 
             {/* Trust Indicators */}
@@ -326,14 +330,18 @@ const Index = () => {
                 Join our community of learners and get access to thousands of courses, expert instructors, and a supportive community.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button
-                  variant="secondary"
-                  size="xl"
-                  onClick={() => navigate('/signup')}
-                  className="bg-background text-foreground hover:bg-background/90"
-                >
-                  Create Free Account
-                </Button>
+                {
+                  !user && (
+                    <Button
+                      variant="secondary"
+                      size="xl"
+                      onClick={() => navigate('/signup')}
+                      className="bg-background text-foreground hover:bg-background/90"
+                    >
+                      Create Free Account
+                    </Button>
+                  )
+                }
                 <Button
                   variant="outline"
                   size="xl"

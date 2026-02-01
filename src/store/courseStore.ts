@@ -1,7 +1,9 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { Course } from "./cartStore";
-import axiosInstance from "../lib/axiosInstance";
+import axiosInstance from "../lib/axiosInstance"; // Ensure this import is correct
+
+const BASE_URL = "http://localhost:5000/";
 
 export interface PurchasedCourse extends Course {
   purchasedAt: string;
@@ -20,13 +22,15 @@ interface CourseState {
   purchasedCourses: PurchasedCourse[];
   courseProgress: Record<string, CourseProgress>;
   purchaseCourses: (courses: Course[]) => void;
-  // NEW: Action to sync API data to store
   loadCourse: (course: Course) => void;
-  markLectureComplete: (courseId: string, lectureId: string) => void;
+  markLectureComplete: (courseId: string, lectureId: string) => Promise<void>; // Updated return type
   setLastWatched: (courseId: string, lectureId: string) => void;
   getCourseProgress: (courseId: string) => CourseProgress | undefined;
   isPurchased: (courseId: string) => boolean;
   isCompleted: (courseId: string) => boolean;
+
+  syncPurchasedCourses: (courses: Course[]) => void;
+  reset: () => void;
 }
 
 export const useCourseStore = create<CourseState>()(
@@ -35,15 +39,54 @@ export const useCourseStore = create<CourseState>()(
       purchasedCourses: [],
       courseProgress: {},
 
-      // 1. NEW ACTION: Safely loads a course into the store if it doesn't exist
+      // 1. NEW: Called on Login to set the user's courses
+      syncPurchasedCourses: (courses) =>
+        set((state) => {
+          // Map backend courses to store format
+          const mappedCourses = courses.map((course) => {
+            // If we already have this course in local state, keep its progress
+            const existing = state.purchasedCourses.find(
+              (p) => p._id === course._id,
+            );
+            return {
+              ...course,
+              purchasedAt: existing
+                ? existing.purchasedAt
+                : new Date().toISOString(),
+              progress: existing ? existing.progress : 0,
+              completedLectures: existing ? existing.completedLectures : [],
+            };
+          });
+
+          // Ensure progress objects exist
+          const newCourseProgress = { ...state.courseProgress };
+          mappedCourses.forEach((c) => {
+            if (!newCourseProgress[c._id]) {
+              newCourseProgress[c._id] = {
+                courseId: c._id,
+                completedLectures: [],
+                lastWatchedLecture: null,
+                progress: 0,
+              };
+            }
+          });
+
+          return {
+            purchasedCourses: mappedCourses, // Overwrite with fresh list
+            courseProgress: newCourseProgress,
+          };
+        }),
+
+      // 2. NEW: Called on Logout to clear data
+      reset: () => set({ purchasedCourses: [], courseProgress: {} }),
+
       loadCourse: (course) =>
         set((state) => {
           const isExisting = state.purchasedCourses.some(
-            (c) => c._id === course._id
+            (c) => c._id === course._id,
           );
           const hasProgress = state.courseProgress[course._id];
 
-          // If it already exists and has progress tracking, do nothing
           if (isExisting && hasProgress) return state;
 
           const newPurchasedCourses = isExisting
@@ -64,7 +107,7 @@ export const useCourseStore = create<CourseState>()(
                 ...state.courseProgress,
                 [course._id]: {
                   courseId: course._id,
-                  completedLectures: [],
+                  completedLectures: [], // Initialize with empty or map from backend if available
                   lastWatchedLecture: null,
                   progress: 0,
                 },
@@ -81,7 +124,7 @@ export const useCourseStore = create<CourseState>()(
           const newPurchases = courses
             .filter(
               (course) =>
-                !state.purchasedCourses.find((p) => p._id === course._id)
+                !state.purchasedCourses.find((p) => p._id === course._id),
             )
             .map((course) => ({
               ...course,
@@ -107,24 +150,36 @@ export const useCourseStore = create<CourseState>()(
         }),
 
       markLectureComplete: async (courseId, lectureId) => {
-        // 1. Optimistic Update (Update UI immediately before API finishes)
+        // 1. Optimistic Update
         set((state) => {
-          const progress = state.courseProgress[courseId];
-          if (!progress) return state;
+          let progress = state.courseProgress[courseId];
 
-          // If already marked, do nothing
+          // Initialize if missing
+          if (!progress) {
+            progress = {
+              courseId,
+              completedLectures: [],
+              lastWatchedLecture: null,
+              progress: 0,
+            };
+          }
+
           if (progress.completedLectures.includes(lectureId)) return state;
 
           const completedLectures = [...progress.completedLectures, lectureId];
 
           const course = state.purchasedCourses.find((c) => c._id === courseId);
+          // Fallback logic for total lectures
           const totalLectures =
             course?.courseContent?.reduce(
               (acc, section) => acc + (section.lectures?.length || 0),
-              0
+              0,
             ) || 1;
 
-          const newProgress = (completedLectures.length / totalLectures) * 100;
+          const newProgress = Math.min(
+            (completedLectures.length / totalLectures) * 100,
+            100,
+          );
 
           return {
             courseProgress: {
@@ -135,28 +190,27 @@ export const useCourseStore = create<CourseState>()(
                 progress: newProgress,
               },
             },
-            // Also update the purchasedCourses array for consistency
             purchasedCourses: state.purchasedCourses.map((c) =>
               c._id === courseId
                 ? { ...c, completedLectures, progress: newProgress }
-                : c
+                : c,
             ),
           };
         });
 
-        // 2. Call the Backend API to save it permanently
+        // 2. Call Backend API
         try {
-          // Replace with your actual API URL or helper function
+          // Ensure the endpoint matches your backend route exactly
           await axiosInstance.post(
-            "http://localhost:5000/api/student/course/progress/mark-complete",
+            `${BASE_URL}api/student/course/progress/mark-complete`,
             {
               courseId,
               lectureId,
-            }
+            },
           );
         } catch (error) {
           console.error("Failed to save progress to server", error);
-          // Optional: You could revert the state here if the API fails
+          // Ideally, revert the optimistic update here if needed
         }
       },
 
@@ -186,6 +240,6 @@ export const useCourseStore = create<CourseState>()(
     }),
     {
       name: "course-storage",
-    }
-  )
+    },
+  ),
 );

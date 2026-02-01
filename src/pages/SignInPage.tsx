@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { GraduationCap, Mail, Lock, ArrowRight } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { loginApi } from '@/backend-apis/auth-apis/auth.apis';
+import { useCourseStore } from '@/store/courseStore';
 
 const SignInPage = () => {
   const navigate = useNavigate();
@@ -14,29 +15,50 @@ const SignInPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { syncPurchasedCourses } = useCourseStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    const loginResponse = await loginApi({ email, password })
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const loginResponse = await loginApi({ email, password })
+      console.log("login response in sign in page: ", loginResponse)
 
-    login({
-      _id: loginResponse.data._id,
-      name: loginResponse.data.name,
-      email: loginResponse.data.email,
-      role: loginResponse.data.role,
-      avatar: loginResponse.data.avatar,
-    });
-    setIsLoading(false);
+      login({
+        _id: loginResponse.data._id,
+        name: loginResponse.data.name,
+        email: loginResponse.data.email,
+        role: loginResponse.data.role,
+        avatar: loginResponse.data.avatar,
+      });
 
-    toast({
-      title: 'Welcome back!',
-      description: 'You have successfully signed in.',
-    });
+      // 3. Load Courses into Store
+      // We check if the array exists and has items
+      if (loginResponse.data.enrolledCourses && Array.isArray(loginResponse.data.enrolledCourses)) {
+        syncPurchasedCourses(loginResponse.data.enrolledCourses);
+      }
 
-    navigate(loginResponse.data.role === 'instructor' ? '/instructor/dashboard' : '/');
+      toast({
+        title: 'Welcome back!',
+        description: 'You have successfully signed in.',
+      });
+
+      navigate(loginResponse.data.role === 'instructor' ? '/instructor/dashboard' : '/');
+    } catch (error) {
+      console.error("Login Error:", error);
+      const errorMessage = error.response?.data?.message || error.message || "Something went wrong";
+
+      toast({
+        title: 'Login Failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

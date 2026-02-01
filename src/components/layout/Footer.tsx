@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { GraduationCap, Facebook, Twitter, Instagram, Linkedin, Mail, Phone, MapPin } from 'lucide-react';
+import { GraduationCap, Facebook, Twitter, Instagram, Linkedin, Mail, Phone, MapPin, Github } from 'lucide-react';
 
 const Footer = () => {
   return (
@@ -18,16 +18,13 @@ const Footer = () => {
               Empowering learners worldwide with quality education. Learn anytime, anywhere with our comprehensive courses.
             </p>
             <div className="flex gap-4">
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                <Facebook className="h-5 w-5" />
+              <a href="https://github.com/Shaikh-abid" target='_blank' className="text-muted-foreground hover:text-primary transition-colors">
+                <Github className="h-5 w-5" />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                <Twitter className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+              <a href="https://www.instagram.com/btwitsabid__/" target='_blank' className="text-muted-foreground hover:text-primary transition-colors">
                 <Instagram className="h-5 w-5" />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+              <a href="https://www.linkedin.com/in/abidali-shaikh-2422b5259/" target='_blank' className="text-muted-foreground hover:text-primary transition-colors">
                 <Linkedin className="h-5 w-5" />
               </a>
             </div>
@@ -45,16 +42,6 @@ const Footer = () => {
               <li>
                 <Link to="/about" className="text-muted-foreground hover:text-primary text-sm transition-colors">
                   About Us
-                </Link>
-              </li>
-              <li>
-                <Link to="/signin" className="text-muted-foreground hover:text-primary text-sm transition-colors">
-                  Sign In
-                </Link>
-              </li>
-              <li>
-                <Link to="/signup" className="text-muted-foreground hover:text-primary text-sm transition-colors">
-                  Sign Up
                 </Link>
               </li>
             </ul>
@@ -93,15 +80,15 @@ const Footer = () => {
             <ul className="space-y-3">
               <li className="flex items-center gap-2 text-muted-foreground text-sm">
                 <Mail className="h-4 w-4 text-primary" />
-                support@lmssystem.com
+                [EMAIL_ADDRESS]
               </li>
               <li className="flex items-center gap-2 text-muted-foreground text-sm">
                 <Phone className="h-4 w-4 text-primary" />
-                +1 (555) 123-4567
+                +91 8767309420
               </li>
               <li className="flex items-start gap-2 text-muted-foreground text-sm">
                 <MapPin className="h-4 w-4 text-primary mt-0.5" />
-                123 Learning Street, Education City, EC 12345
+                Pune - 411003, Maharashtra, India
               </li>
             </ul>
           </div>
