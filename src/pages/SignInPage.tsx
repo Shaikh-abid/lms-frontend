@@ -8,6 +8,7 @@ import { GraduationCap, Mail, Lock, ArrowRight } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { loginApi } from '@/backend-apis/auth-apis/auth.apis';
 import { useCourseStore } from '@/store/courseStore';
+import { Eye, EyeClosed } from 'lucide-react';
 
 const SignInPage = () => {
   const navigate = useNavigate();
@@ -16,6 +17,7 @@ const SignInPage = () => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { syncPurchasedCourses } = useCourseStore();
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,20 +107,31 @@ const SignInPage = () => {
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Password</Label>
                   {/* <a href="#" className="text-sm text-primary hover:underline">
-                    Forgot password?
-                  </a> */}
+      Forgot password?
+    </a> */}
                 </div>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <Input
                     id="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 pr-10"
                     required
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showPassword ? (
+                      <EyeClosed className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
                 </div>
               </div>
             </div>
@@ -144,11 +157,10 @@ const SignInPage = () => {
 
           {/* Demo Accounts */}
           <div className="bg-muted rounded-xl p-4 space-y-2">
-            <p className="text-sm font-medium">Demo Accounts:</p>
+            <p className="text-sm font-medium">Demo Account:</p>
             <div className="text-xs text-muted-foreground space-y-1">
-              <p>Student: student@demo.com</p>
-              <p>Instructor: instructor@demo.com</p>
-              <p>(Any password works)</p>
+              <p>email: studenttest@gmail.com</p>
+              <p>password: 123456</p>
             </div>
           </div>
         </div>
