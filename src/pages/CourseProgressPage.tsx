@@ -272,7 +272,7 @@ const CourseProgressPage = () => {
                 <CourseCertificate ref={certificateRef} certificate={certificate} />
                 <Button variant="gradient" className="gap-2">
                   <Download className="h-4 w-4" />
-                  Download Certificate
+                  Download Certificate Coming Soon
                 </Button>
               </>
             )}
